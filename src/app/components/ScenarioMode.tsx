@@ -1,9 +1,15 @@
 import { useState } from 'react';
 import { Play, AlertTriangle, TrendingUp, Zap, CheckCircle2, XCircle } from 'lucide-react';
+import { runScenarioSimulation, type ScenarioName } from '../services/api';
 
 export function ScenarioMode() {
   const [activeScenario, setActiveScenario] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [result, setResult] = useState<{
+    fallback: boolean;
+    summary: { recommendations: number; urgentActions: number; potentialSavings: number };
+    decisions: Array<{ title: string; action: string; priority: string }>;
+  } | null>(null);
 
   const scenarios = [
     {
@@ -89,10 +95,24 @@ export function ScenarioMode() {
     },
   ];
 
-  const handleRunScenario = (scenarioId: string) => {
+  const scenarioNameMap: Record<string, ScenarioName> = {
+    normal: 'Normal Market',
+    'oil-crisis': 'Oil Crisis',
+    'supplier-overcharge': 'Normal Market',
+    'fed-rate-hike': 'Interest Rate Drop',
+  };
+
+  const handleRunScenario = async (scenarioId: string) => {
     setActiveScenario(scenarioId);
     setIsRunning(true);
-    setTimeout(() => setIsRunning(false), 2000);
+    try {
+      const data = await runScenarioSimulation(scenarioNameMap[scenarioId] ?? 'Normal Market');
+      setResult(data);
+    } catch {
+      setResult(null);
+    } finally {
+      setIsRunning(false);
+    }
   };
 
   const activeData = scenarios.find(s => s.id === activeScenario);
@@ -152,32 +172,47 @@ export function ScenarioMode() {
               <p className="text-sm text-slate-400">GLM analysis complete</p>
             </div>
             <button
-              onClick={() => setActiveScenario(null)}
+              onClick={() => {
+                setActiveScenario(null);
+                setResult(null);
+              }}
               className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm transition-colors"
             >
               Clear Results
             </button>
           </div>
 
+          {result?.fallback && (
+            <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-300">
+              FALLBACK MODE: Using 90-day historical averages.
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-800">
               <div className="text-xs text-slate-400 mb-1">Total Recommendations</div>
-              <div className="text-3xl font-mono font-bold text-cyan-400">{activeData.results.recommendations}</div>
+              <div className="text-3xl font-mono font-bold text-cyan-400">
+                {result?.summary.recommendations ?? activeData.results.recommendations}
+              </div>
             </div>
             <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-800">
               <div className="text-xs text-slate-400 mb-1">Urgent Actions</div>
-              <div className="text-3xl font-mono font-bold text-red-400">{activeData.results.urgentActions}</div>
+              <div className="text-3xl font-mono font-bold text-red-400">
+                {result?.summary.urgentActions ?? activeData.results.urgentActions}
+              </div>
             </div>
             <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-800">
               <div className="text-xs text-slate-400 mb-1">Potential Savings</div>
-              <div className="text-3xl font-mono font-bold text-emerald-400">{activeData.results.potentialSavings}</div>
+              <div className="text-3xl font-mono font-bold text-emerald-400">
+                RM {(result?.summary.potentialSavings ?? 0).toLocaleString()}
+              </div>
             </div>
           </div>
 
           <div>
             <h3 className="font-medium mb-3">AI Recommendations</h3>
             <div className="space-y-2">
-              {activeData.results.decisions.map((decision, idx) => (
+              {(result?.decisions ?? activeData.results.decisions).map((decision, idx) => (
                 <div
                   key={idx}
                   className="bg-slate-900/50 border border-slate-800 rounded-lg p-4 hover:border-slate-700 transition-colors"
