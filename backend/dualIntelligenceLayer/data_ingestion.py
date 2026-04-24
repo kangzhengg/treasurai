@@ -23,8 +23,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from data_cleaner import filter_headlines_by_keywords, normalize_news_items
-from news_fetcher import NewsFetcher
+from .data_cleaner import filter_headlines_by_keywords, normalize_news_items
+from .news_fetcher import NewsFetcher
 
 
 def load_erp_json(path: Path) -> dict[str, Any]:

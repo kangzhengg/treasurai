@@ -1,6 +1,6 @@
 """
-API Routes for Simulation Engine
-FastAPI routes exposing all simulation engines via REST API
+API Routes for Unified TreasurAI Engine
+FastAPI routes exposing Simulation, ROI, and GLM orchestration
 """
 
 from fastapi import APIRouter, HTTPException
@@ -8,6 +8,7 @@ from simulation.fx_simulator import FXSimulator
 from simulation.roi_calculator import ROICalculator
 from simulation.supplier_negotiation import SupplierNegotiationEngine
 from simulation.scenario_manager import ScenarioManager
+from services.analysis_controller import analyze_financials
 
 router = APIRouter(prefix="/api", tags=["simulation"])
 
@@ -18,7 +19,24 @@ supplier_negotiation = SupplierNegotiationEngine()
 scenario_manager = ScenarioManager()
 
 
-# ============= FX SIMULATION ROUTES =============
+# ============= ORCHESTRATION ROUTES (Member 4) =============
+
+@router.post("/analyze")
+def run_full_analysis(request_data: dict = None):
+    """
+    Member 4: Full Orchestrated Analysis
+    Flow: Data -> GLM -> Simulation
+    """
+    try:
+        # Default ERP path if not provided
+        erp_path = request_data.get("erp_path", "member1_data/erp_data.json") if request_data else "member1_data/erp_data.json"
+        result = analyze_financials(erp_path)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ============= FX SIMULATION ROUTES (Member 5) =============
 
 @router.get("/fx/strategies")
 def get_fx_strategies(currency: str = "USD", amount: int = 1000000, days: int = 30, scenario: str = "NORMAL"):
