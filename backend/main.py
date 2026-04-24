@@ -1,23 +1,28 @@
 """
 TreasurAI Backend - Unified Entry Point
-Consolidated Python FastAPI Backend following the 5-Member Architecture
+5-Member Architecture Integrated System
 """
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import os
 from datetime import datetime
-from fastapi_app.api_routes import router
+import os
 
-# Initialize FastAPI app
+
+from routes import analyze
+
+
+from fastapi_app.api_routes import router as main_router
+
+
 app = FastAPI(
     title="TreasurAI Unified Backend",
-    description="Consolidated Treasury Management System - 5 Member Architecture",
+    description="AI-powered treasury decision system",
     version="2.1.0",
 )
 
-# Add CORS middleware
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,78 +31,67 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include consolidated routes
-app.include_router(router)
 
 
-# ============= ROOT ROUTES =============
+app.include_router(main_router)
+
+
+app.include_router(analyze.router)
+
+
+
 
 @app.get("/")
 def home():
-    """Root endpoint - API overview"""
     return {
         "message": "TreasurAI Unified Backend Running 🔥",
-        "architecture": "5-Member Python FastAPI",
         "timestamp": datetime.now().isoformat(),
-        "members": {
-            "Member 1": "GLM Decision Engine (dualIntelligenceLayer_glm)",
-            "Member 2": "API Routes & FastAPI Structure (fastapi_app)",
-            "Member 3": "Data Ingestion (dualIntelligenceLayer)",
-            "Member 4": "Orchestration Controller (services)",
-            "Member 5": "Simulation & ROI Engine (simulation)"
-        },
+        "system": "5-Member Architecture Integrated",
         "endpoints": {
             "health": "/api/health",
-            "analyze": "/api/analyze (Member 4 Orchestration)",
-            "fx": "/api/fx/strategies",
-            "roi": "/api/roi/fx-strategy",
-            "scenarios": "/api/scenarios/compare"
+            "analyze": "/api/analyze",
+            "simulate": "/api/simulate",
+            "dashboard": "/api/dashboard"
         }
     }
 
 
-@app.get("/health")
+
+
+@app.get("/api/health")
 def health():
-    """Health check endpoint"""
     return {
-        "status": "OK",
-        "timestamp": datetime.now().isoformat(),
-        "backend": "Python FastAPI",
+        "status": "ok",
+        "system": "TreasurAI Backend",
+        "time": datetime.now().isoformat()
     }
 
 
-# ============= ERROR HANDLERS =============
+
 
 @app.exception_handler(404)
-async def not_found_handler(request, exc):
-    """Handle 404 errors"""
+async def not_found(request, exc):
     return JSONResponse(
         status_code=404,
-        content={"error": "Endpoint not found", "path": request.url.path},
+        content={"error": "Not found", "path": request.url.path},
     )
 
 
 @app.exception_handler(500)
-async def internal_error_handler(request, exc):
-    """Handle 500 errors"""
+async def server_error(request, exc):
     return JSONResponse(
         status_code=500,
         content={"error": "Internal server error"},
     )
 
 
-# ============= SERVER START =============
 
 if __name__ == "__main__":
     import uvicorn
 
-    port = int(os.getenv("PORT", 3001))
-    host = os.getenv("HOST", "0.0.0.0")
-
-    print(f"Starting TreasurAI Unified Backend on {host}:{port}")
     uvicorn.run(
         "main:app",
-        host=host,
-        port=port,
+        host="0.0.0.0",
+        port=int(os.getenv("PORT", 8787)),
         reload=True
     )
