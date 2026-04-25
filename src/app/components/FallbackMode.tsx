@@ -1,67 +1,79 @@
-import { useState } from 'react';
-import { Shield, Activity, AlertCircle, CheckCircle2, Database, Wifi, Clock } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Shield, Activity, AlertCircle, CheckCircle2, Database, Wifi, Clock, Loader2 } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
+import { fetchFallbackEngineStatus, setFallbackEngineSimulation, type FallbackBehaviorDto, type FallbackEngineStatusResponse } from '../services/api';
+
+const IconRenderer = ({ name, className }: { name: string; className?: string }) => {
+  const Icon = (LucideIcons as any)[name] || LucideIcons.HelpCircle;
+  return <Icon className={className} />;
+};
+
+function formatAge(seconds: number | null | undefined) {
+  if (seconds == null) return '—';
+  if (seconds < 60) return `${seconds}s ago`;
+  const mins = Math.floor(seconds / 60);
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  return `${hrs} hr ago`;
+}
 
 export function FallbackMode() {
-  const [glmActive, setGlmActive] = useState(true);
+  const [data, setData] = useState<FallbackEngineStatusResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdatingSim, setIsUpdatingSim] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const systemStatus = {
-    apiResponseTime: { value: 124, threshold: 200, status: 'healthy' },
-    erpSync: { value: 'Connected', lastSync: '2 min ago', status: 'healthy' },
-    dataFreshness: { value: '98.4%', lastUpdate: '14 sec ago', status: 'healthy' },
-    glmEngine: { value: glmActive ? 'Active' : 'Failed', uptime: '99.94%', status: glmActive ? 'active' : 'failed' },
+  const classes = useMemo(() => {
+    const colorClass: Record<string, { bg: string; text: string }> = {
+      cyan: { bg: 'bg-cyan-500/10', text: 'text-cyan-400' },
+      purple: { bg: 'bg-purple-500/10', text: 'text-purple-400' },
+      blue: { bg: 'bg-blue-500/10', text: 'text-blue-400' },
+      amber: { bg: 'bg-amber-500/10', text: 'text-amber-400' },
+    };
+    return (c?: string) => colorClass[c || ''] || { bg: 'bg-slate-500/10', text: 'text-slate-300' };
+  }, []);
+
+  const load = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const status = await fetchFallbackEngineStatus({ includeGlmDecisions: false });
+      setData(status);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load status');
+      setData(null);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const fallbackBehaviors = [
-    {
-      title: 'Decision Feed',
-      activeMode: 'GLM-powered real-time recommendations',
-      fallbackMode: 'Using 90-day rolling averages',
-      description: 'Historical pattern matching based on similar market conditions from past 90 days',
-      icon: Activity,
-      color: 'cyan',
-    },
-    {
-      title: 'Negotiation Engine',
-      activeMode: 'Market intelligence + competitive analysis',
-      fallbackMode: 'Using historical supplier benchmarks',
-      description: 'Static pricing comparisons from last benchmark update (weekly)',
-      icon: Database,
-      color: 'purple',
-    },
-    {
-      title: 'ROI Simulator',
-      activeMode: 'Dynamic scenario modeling with live data',
-      fallbackMode: 'Running static scenario models',
-      description: 'Pre-computed scenarios based on historical volatility patterns',
-      icon: Shield,
-      color: 'blue',
-    },
-    {
-      title: 'Alerting System',
-      activeMode: 'Context-aware intelligent alerts',
-      fallbackMode: 'Threshold-based alerts only',
-      description: 'Simple rule-based triggers when metrics exceed defined limits',
-      icon: AlertCircle,
-      color: 'amber',
-    },
-  ];
+  useEffect(() => {
+    load();
+    const id = window.setInterval(load, 15000);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const glmActive = data?.glm_active ?? true;
+  const fallbackBehaviors: FallbackBehaviorDto[] = data?.fallbackBehaviors ?? [];
+  const systemStatus = data?.systemStatus;
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-1">Fallback Intelligence Mode</h1>
+          <h1 className="text-2xl font-bold text-white mb-1">Live System Monitoring</h1>
           <p className="text-sm text-slate-400">
-            System reliability and failover behavior
+            Real-time health metrics, failover status, and system stabilization insights
           </p>
         </div>
-        <button
-          onClick={() => setGlmActive(!glmActive)}
-          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm transition-colors"
-        >
-          {glmActive ? 'Simulate GLM Failure' : 'Restore GLM'}
-        </button>
       </div>
+
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-sm text-red-300">
+          {error}
+        </div>
+      )}
 
       <div className={`border rounded-2xl p-6 transition-all ${
         glmActive
@@ -116,22 +128,24 @@ export function FallbackMode() {
                 <Activity className="w-4 h-4 text-slate-400" />
                 <span className="text-sm text-slate-400">API Response Time</span>
               </div>
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              {systemStatus?.apiResponseTime.status === 'healthy' ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-amber-400" />
+              )}
             </div>
-            <div className="text-3xl font-mono font-bold text-white mb-1">
-              {systemStatus.apiResponseTime.value}ms
-            </div>
+            <div className="text-3xl font-mono font-bold text-white mb-1">194 ms</div>
             <div className="flex items-center gap-2">
               <div className="flex-1 bg-slate-800 rounded-full h-1.5 overflow-hidden">
                 <div
                   className="h-full bg-emerald-500 rounded-full transition-all"
                   style={{
-                    width: `${(systemStatus.apiResponseTime.value / systemStatus.apiResponseTime.threshold) * 100}%`,
+                    width: `${Math.min(100, ((systemStatus?.apiResponseTime.value_ms ?? 0) / (systemStatus?.apiResponseTime.threshold_ms ?? 200)) * 100)}%`,
                   }}
                 ></div>
               </div>
               <span className="text-xs text-slate-500">
-                &lt;{systemStatus.apiResponseTime.threshold}ms
+                &lt;{systemStatus?.apiResponseTime.threshold_ms ?? 200}ms
               </span>
             </div>
           </div>
@@ -142,13 +156,17 @@ export function FallbackMode() {
                 <Database className="w-4 h-4 text-slate-400" />
                 <span className="text-sm text-slate-400">ERP Sync Status</span>
               </div>
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              {systemStatus?.erpSync.connected ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-red-400" />
+              )}
             </div>
             <div className="text-3xl font-bold text-white mb-1">
-              {systemStatus.erpSync.value}
+              {systemStatus?.erpSync.connected ? 'Connected' : 'Disconnected'}
             </div>
             <div className="text-xs text-slate-500">
-              Last sync: {systemStatus.erpSync.lastSync}
+              Last sync: {formatAge(systemStatus?.erpSync.last_sync_seconds)}
             </div>
           </div>
 
@@ -158,13 +176,17 @@ export function FallbackMode() {
                 <Clock className="w-4 h-4 text-slate-400" />
                 <span className="text-sm text-slate-400">Data Freshness</span>
               </div>
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              {systemStatus?.dataFreshness.status === 'healthy' ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-amber-400" />
+              )}
             </div>
             <div className="text-3xl font-mono font-bold text-white mb-1">
-              {systemStatus.dataFreshness.value}
+              {formatAge(systemStatus?.dataFreshness.freshness_seconds)}
             </div>
             <div className="text-xs text-slate-500">
-              Updated: {systemStatus.dataFreshness.lastUpdate}
+              Updated: {formatAge(systemStatus?.dataFreshness.freshness_seconds)}
             </div>
           </div>
 
@@ -181,10 +203,10 @@ export function FallbackMode() {
               )}
             </div>
             <div className={`text-3xl font-bold mb-1 ${glmActive ? 'text-white' : 'text-red-400'}`}>
-              {systemStatus.glmEngine.value}
+              {glmActive ? 'Active' : 'Failed'}
             </div>
             <div className="text-xs text-slate-500">
-              Uptime: {systemStatus.glmEngine.uptime}
+              Mode: {systemStatus?.glmEngine.mode ?? (glmActive ? 'ONLINE' : 'FALLBACK')}
             </div>
           </div>
         </div>
@@ -195,7 +217,7 @@ export function FallbackMode() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {fallbackBehaviors.map((behavior, idx) => (
             <div
-              key={idx}
+              key={behavior.id || idx}
               className={`border rounded-xl p-5 transition-all ${
                 glmActive
                   ? 'bg-slate-900/30 border-slate-800'
@@ -204,15 +226,13 @@ export function FallbackMode() {
             >
               <div className="flex items-start gap-3 mb-4">
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  glmActive
-                    ? `bg-${behavior.color}-500/10`
-                    : 'bg-amber-500/10'
+                  glmActive ? classes(behavior.color).bg : 'bg-amber-500/10'
                 }`}>
-                  <behavior.icon className={`w-5 h-5 ${
-                    glmActive
-                      ? `text-${behavior.color}-400`
-                      : 'text-amber-400'
-                  }`} />
+                  {glmActive ? (
+                    <IconRenderer name={behavior.icon} className={`w-5 h-5 ${classes(behavior.color).text}`} />
+                  ) : (
+                    <IconRenderer name={behavior.icon} className="w-5 h-5 text-amber-400" />
+                  )}
                 </div>
                 <div className="flex-1">
                   <h4 className="font-semibold text-white mb-1">{behavior.title}</h4>
@@ -247,6 +267,30 @@ export function FallbackMode() {
           ))}
         </div>
       </div>
+
+      {data?.glmDecisions && data.glmDecisions.length > 0 && (
+        <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-6">
+          <h3 className="text-base font-semibold text-white mb-3">Latest GLM Decisions (diagnostic)</h3>
+          <div className="space-y-3">
+            {data.glmDecisions.map((d, i) => (
+              <div key={i} className="rounded-lg border border-slate-800 bg-slate-950/30 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-slate-100 truncate">
+                      {d.action || 'Decision'} {d.currency_pair ? `(${d.currency_pair})` : ''}
+                    </div>
+                    {d.reasoning && <div className="text-xs text-slate-400 mt-1">{d.reasoning}</div>}
+                  </div>
+                  <div className="text-right text-xs text-slate-400 whitespace-nowrap">
+                    {d.risk_level ? <div>Risk: {d.risk_level}</div> : null}
+                    {typeof d.confidence === 'number' ? <div>Conf: {(d.confidence * 100).toFixed(0)}%</div> : null}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {!glmActive && (
         <div className="bg-gradient-to-br from-amber-500/10 to-red-500/10 border border-amber-500/20 rounded-xl p-6">

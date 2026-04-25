@@ -9,9 +9,13 @@ from simulation.roi_calculator import ROICalculator
 from simulation.supplier_negotiation import SupplierNegotiationEngine
 from simulation.scenario_manager import ScenarioManager
 from services.analysis_controller import analyze_financials
+from services import analysis_controller
 from dualIntelligenceLayer_glm.glm_engine import GLMDecisionEngine
 from dualIntelligenceLayer.data_ingestion import refresh_once
 from pathlib import Path
+from datetime import datetime, timezone
+import time
+from typing import Any, Dict, Optional
 
 router = APIRouter(prefix="/api", tags=["simulation"])
 
@@ -21,6 +25,13 @@ roi_calculator = ROICalculator()
 supplier_negotiation = SupplierNegotiationEngine()
 scenario_manager = ScenarioManager()
 glm_engine = GLMDecisionEngine()
+
+# In-memory toggle to help the UI demonstrate failover behavior.
+# NOTE: This is intentionally ephemeral (resets on server restart).
+_SIMULATE_GLM_DOWN = False
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 # ============= ORCHESTRATION ROUTES (Member 4) =============
@@ -38,6 +49,143 @@ def run_full_analysis(request_data: dict = None):
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# ============= SYSTEM / FALLBACK ROUTES =============
+
+@router.get("/system/fallback")
+def get_fallback_engine_status(include_glm_decisions: bool = False) -> Dict[str, Any]:
+    """
+    Provides a backend-driven status payload for the "Live System Monitoring" page.
+    Uses the cached orchestration result to avoid GLM overload.
+    """
+    global _SIMULATE_GLM_DOWN
+
+    # IMPORTANT: this endpoint must respond fast.
+    # Prefer cached analysis; do not trigger a full analysis run here.
+    started = time.time()
+    cached = analysis_controller._CACHE.get("dashboard_analysis") if hasattr(analysis_controller, "_CACHE") else None
+    analysis = cached[0] if isinstance(cached, tuple) and len(cached) == 2 else {}
+    elapsed_ms = int((time.time() - started) * 1000)
+
+    is_fallback = bool((analysis.get("metadata", {}) or {}).get("is_fallback", False))
+    if _SIMULATE_GLM_DOWN:
+        is_fallback = True
+
+    # Derive "data freshness" from the orchestration timestamp when possible.
+    fetched_at = analysis.get("timestamp") or (analysis.get("metadata", {}) or {}).get("timestamp")
+    freshness_seconds: Optional[int] = None
+    try:
+        if isinstance(fetched_at, str) and fetched_at:
+            # Best-effort parse; tolerate missing Z.
+            ts = fetched_at.replace("Z", "+00:00")
+            dt = datetime.fromisoformat(ts)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            freshness_seconds = max(0, int((datetime.now(timezone.utc) - dt).total_seconds()))
+    except Exception:
+        freshness_seconds = None
+
+    # ERP "sync" is approximated by file mtime of the ERP JSON.
+    erp_path = Path("dualIntelligenceLayer/erp_data.json")
+    if not erp_path.exists():
+        erp_path = Path("backend/dualIntelligenceLayer/erp_data.json")
+    erp_connected = erp_path.exists()
+    erp_last_sync_seconds: Optional[int] = None
+    if erp_connected:
+        try:
+            erp_last_sync_seconds = max(0, int(time.time() - erp_path.stat().st_mtime))
+        except Exception:
+            erp_last_sync_seconds = None
+
+    fallback_behaviors = [
+        {
+            "id": "decision-feed",
+            "title": "Decision Feed",
+            "activeMode": "GLM-powered real-time recommendations",
+            "fallbackMode": "Using 90-day rolling averages",
+            "description": "Historical pattern matching based on similar market conditions from past 90 days",
+            "icon": "Activity",
+            "color": "cyan",
+        },
+        {
+            "id": "negotiation-engine",
+            "title": "Negotiation Engine",
+            "activeMode": "Market intelligence + competitive analysis",
+            "fallbackMode": "Using historical supplier benchmarks",
+            "description": "Static pricing comparisons from last benchmark update (weekly)",
+            "icon": "Database",
+            "color": "purple",
+        },
+        {
+            "id": "roi-simulator",
+            "title": "ROI Simulator",
+            "activeMode": "Dynamic scenario modeling with live data",
+            "fallbackMode": "Running static scenario models",
+            "description": "Pre-computed scenarios based on historical volatility patterns",
+            "icon": "Shield",
+            "color": "blue",
+        },
+        {
+            "id": "alerting-system",
+            "title": "Alerting System",
+            "activeMode": "Context-aware intelligent alerts",
+            "fallbackMode": "Threshold-based alerts only",
+            "description": "Simple rule-based triggers when metrics exceed defined limits",
+            "icon": "AlertCircle",
+            "color": "amber",
+        },
+    ]
+
+    glm_decisions = None
+    if include_glm_decisions:
+        glm_decisions = (analysis.get("glm_decision", {}) or {}).get("decisions", [])
+        if not isinstance(glm_decisions, list):
+            glm_decisions = []
+        # keep it small for the UI
+        glm_decisions = glm_decisions[:3]
+
+    return {
+        "success": True,
+        "timestamp_utc": _utc_now_iso(),
+        "simulate_glm_down": _SIMULATE_GLM_DOWN,
+        "glm_active": (not is_fallback),
+        "systemStatus": {
+            "apiResponseTime": {
+                "value_ms": elapsed_ms,
+                "threshold_ms": 200,
+                "status": "healthy" if elapsed_ms < 200 else "degraded",
+            },
+            "erpSync": {
+                "connected": erp_connected,
+                "last_sync_seconds": erp_last_sync_seconds,
+                "status": "healthy" if erp_connected else "failed",
+            },
+            "dataFreshness": {
+                "freshness_seconds": freshness_seconds,
+                "status": "healthy" if freshness_seconds is None or freshness_seconds < 120 else "degraded",
+            },
+            "glmEngine": {
+                "status": "active" if (not is_fallback) else "failed",
+                "mode": "ONLINE" if (not is_fallback) else "FALLBACK",
+                "reason": (analysis.get("glm_decision", {}) or {}).get("metadata", {}).get("reason"),
+            },
+        },
+        "fallbackBehaviors": fallback_behaviors,
+        "glmDecisions": glm_decisions,
+    }
+
+
+@router.post("/system/fallback/simulate")
+def set_fallback_simulation(request_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Enables/disables in-memory GLM-down simulation for the Live System Monitoring UI.
+    Body: { "simulate_glm_down": true/false }
+    """
+    global _SIMULATE_GLM_DOWN
+    simulate = bool(request_data.get("simulate_glm_down", False))
+    _SIMULATE_GLM_DOWN = simulate
+    return {"success": True, "simulate_glm_down": _SIMULATE_GLM_DOWN, "timestamp_utc": _utc_now_iso()}
 
 
 @router.get("/dashboard")

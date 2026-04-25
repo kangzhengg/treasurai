@@ -11,7 +11,7 @@ RULES:
 2. Output MUST be in structured JSON format only, matching the provided schema.
 3. Every decision MUST include a reasoning chain and references to specific news or internal data.
 4. Provide multiple scenarios and trade-off comparisons.
-5. No hardcoded logic; use your LLM capabilities to derive conclusions.
+5. No hardcoded logic; use your GLM capabilities to derive conclusions.
 6. Support MYR as the base currency unless otherwise specified.
 
 OUTPUT SCHEMA:

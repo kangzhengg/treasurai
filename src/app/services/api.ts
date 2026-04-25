@@ -305,3 +305,110 @@ export async function fetchSupplierNegotiation(supplierData: {
   return { data: result.data, source: result.source || "STATIC" };
 }
 
+export interface FallbackBehaviorDto {
+  id: string;
+  title: string;
+  activeMode: string;
+  fallbackMode: string;
+  description: string;
+  icon: string; // lucide icon name to render
+  color: "cyan" | "purple" | "blue" | "amber" | string;
+}
+
+export interface FallbackEngineStatusResponse {
+  success: boolean;
+  timestamp_utc: string;
+  simulate_glm_down: boolean;
+  glm_active: boolean;
+  systemStatus: {
+    apiResponseTime: {
+      value_ms: number;
+      threshold_ms: number;
+      status: "healthy" | "degraded" | "failed" | string;
+    };
+    erpSync: {
+      connected: boolean;
+      last_sync_seconds: number | null;
+      status: "healthy" | "degraded" | "failed" | string;
+    };
+    dataFreshness: {
+      freshness_seconds: number | null;
+      status: "healthy" | "degraded" | "failed" | string;
+    };
+    glmEngine: {
+      status: "active" | "failed" | string;
+      mode: "ONLINE" | "FALLBACK" | string;
+      reason?: string;
+    };
+  };
+  fallbackBehaviors: FallbackBehaviorDto[];
+  glmDecisions?: Array<{
+    action?: string;
+    currency_pair?: string;
+    amount?: number;
+    reasoning?: string;
+    risk_level?: string;
+    estimated_savings?: number;
+    confidence?: number;
+  }> | null;
+}
+
+export async function fetchFallbackEngineStatus(opts?: { includeGlmDecisions?: boolean }): Promise<FallbackEngineStatusResponse> {
+  const include = opts?.includeGlmDecisions ? "true" : "false";
+  const response = await fetch(`${API_BASE}/api/system/fallback?include_glm_decisions=${include}`);
+  if (!response.ok) throw new Error("Failed to load live system monitoring status");
+  return response.json();
+}
+
+export async function setFallbackEngineSimulation(simulate_glm_down: boolean): Promise<{ success: boolean; simulate_glm_down: boolean }> {
+  const response = await fetch(`${API_BASE}/api/system/fallback/simulate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ simulate_glm_down }),
+  });
+  if (!response.ok) throw new Error("Failed to update fallback simulation");
+  return response.json();
+}
+
+export interface FXRate {
+  pair: string;
+  rate: number;
+  change?: number;
+  changePercent?: number;
+  trend?: 'up' | 'down';
+  data?: number[];
+}
+
+export async function fetchLiveFXRates(): Promise<{ success: boolean; data: Record<string, number> }> {
+  const response = await fetch(`${API_BASE}/api/fx/rates`);
+  if (!response.ok) throw new Error("Failed to fetch FX rates");
+  return response.json();
+}
+
+export interface NewsItem {
+  headline: string;
+  source: string;
+  published_at?: string;
+  impact?: 'high' | 'medium' | 'low';
+}
+
+export async function fetchLiveMarketNews(): Promise<{ success: boolean; data: NewsItem[] }> {
+  try {
+    const dashboardData = await fetchDashboard('Normal Market');
+    const newsData = dashboardData.raw.latest_analysis.company_data?.news_data || [];
+    
+    // Map news data to NewsItem format
+    const mappedNews: NewsItem[] = newsData.map((news: any) => ({
+      headline: news.headline || news.title || 'Market Update',
+      source: news.source || 'Market Data',
+      published_at: news.published_at || new Date().toISOString(),
+      impact: 'medium' as const, // Default impact level
+    }));
+    
+    return { success: true, data: mappedNews };
+  } catch (error) {
+    console.error('Failed to fetch live market news:', error);
+    throw error;
+  }
+}
+

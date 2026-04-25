@@ -5,7 +5,7 @@ export function RightSidebar() {
   const fxRates = [
     {
       pair: 'USD/MYR',
-      rate: 4.7215,
+      rate: 3.9615,
       change: '+0.024',
       changePercent: '+0.51%',
       trend: 'up',
@@ -13,7 +13,7 @@ export function RightSidebar() {
     },
     {
       pair: 'EUR/MYR',
-      rate: 5.0621,
+      rate: 4.6421,
       change: '-0.012',
       changePercent: '-0.24%',
       trend: 'down',
@@ -21,7 +21,7 @@ export function RightSidebar() {
     },
     {
       pair: 'SGD/MYR',
-      rate: 3.5142,
+      rate: 3.1142,
       change: '+0.008',
       changePercent: '+0.23%',
       trend: 'up',

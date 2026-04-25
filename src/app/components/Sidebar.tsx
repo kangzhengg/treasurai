@@ -25,11 +25,10 @@ export function Sidebar({ activeView, setActiveView }: SidebarProps) {
 
   const analyticsItems = [
     { id: 'scenario', label: 'Scenario Mode', icon: Layers },
-    { id: 'impact', label: 'Impact Calculator', icon: Calculator },
   ];
 
   const systemItems = [
-    { id: 'fallback', label: 'Fallback Engine', icon: AlertCircle },
+    { id: 'fallback', label: 'Live System Monitoring', icon: AlertCircle },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -37,12 +36,16 @@ export function Sidebar({ activeView, setActiveView }: SidebarProps) {
     <aside className="w-64 bg-[#0d1117] border-r border-slate-800 flex flex-col">
       <div className="p-6 border-b border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-            <Brain className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-xl overflow-hidden">
+            <img
+              src="/logo.png"
+              alt="TreasurAI Logo"
+              className="w-full h-full object-cover"
+            />
           </div>
           <div>
-            <h1 className="font-semibold text-lg">Treasur AI</h1>
-            <p className="text-xs text-slate-400">v2.0</p>
+            <h1 className="font-semibold text-lg">TreasurAI</h1>
+            <p className="text-xs text-slate-400">v1.0</p>
           </div>
         </div>
       </div>

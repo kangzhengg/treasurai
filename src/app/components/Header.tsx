@@ -13,11 +13,16 @@ export function Header({ activeView, onToggleIntelligence }: HeaderProps) {
     negotiation: { title: 'Negotiation Generator', subtitle: 'Smart supplier negotiation strategies' },
     scenario: { title: 'Scenario Simulation', subtitle: 'Test decisions before committing' },
     impact: { title: 'Impact Calculator', subtitle: 'Quantify savings & project value' },
-    fallback: { title: 'Fallback Intelligence', subtitle: 'System reliability & failover behavior' },
+    fallback: { title: 'Live System Monitoring', subtitle: 'Real-time health metrics, failover status, and system stabilization insights' },
     settings: { title: 'AI Configuration', subtitle: 'System settings & preferences' },
   };
 
-  const currentView = viewTitles[activeView] || viewTitles.dashboard;
+  const currentView =
+    viewTitles[activeView] ??
+    viewTitles.dashboard ?? {
+      title: 'Decision Feed',
+      subtitle: 'AI-powered treasury recommendations',
+    };
 
   return (
     <header className="h-16 border-b border-slate-800 bg-[#0d1117]/80 backdrop-blur-sm flex items-center justify-between px-6">
@@ -53,7 +58,7 @@ export function Header({ activeView, onToggleIntelligence }: HeaderProps) {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
             <User className="w-4 h-4" />
           </div>
-          <span className="text-sm">Maxis Berhad</span>
+          <span className="text-sm">Bloomify</span>
         </button>
       </div>
     </header>

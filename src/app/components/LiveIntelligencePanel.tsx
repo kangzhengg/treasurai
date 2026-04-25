@@ -10,27 +10,27 @@ export function LiveIntelligencePanel({ isOpen, onClose }: LiveIntelligencePanel
   const fxRates = [
     {
       pair: 'USD/MYR',
-      rate: 4.7215,
+      rate: 3.9615,
       change: '+0.024',
       changePercent: '+0.51%',
       trend: 'up',
-      data: [4.71, 4.715, 4.713, 4.718, 4.720, 4.7215],
+      data: [3.96, 3.962, 3.961, 3.963, 3.964, 3.9615],
     },
     {
       pair: 'EUR/MYR',
-      rate: 5.0621,
+      rate:  4.6421,
       change: '-0.012',
       changePercent: '-0.24%',
       trend: 'down',
-      data: [5.07, 5.068, 5.065, 5.063, 5.064, 5.0621],
+      data: [4.64, 4.642, 4.641, 4.643, 4.644, 4.6421],
     },
     {
       pair: 'SGD/MYR',
-      rate: 3.5142,
+      rate: 3.1142,
       change: '+0.008',
       changePercent: '+0.23%',
       trend: 'up',
-      data: [3.510, 3.512, 3.511, 3.513, 3.514, 3.5142],
+      data: [3.11, 3.112, 3.111, 3.113, 3.114, 3.1142],
     },
   ];
 

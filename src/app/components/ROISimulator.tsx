@@ -25,7 +25,8 @@ export function ROISimulator() {
         const data = await fetchROIScenarios();
         setScenarios(data);
         if (data.length > 0 && !selectedScenarioId) {
-          setSelectedScenarioId(data[0].id);
+          const firstId = data[0]?.id;
+          if (firstId) setSelectedScenarioId(firstId);
         }
       } catch (error) {
         console.error("Failed to fetch scenarios:", error);
@@ -37,7 +38,7 @@ export function ROISimulator() {
   }, []);
 
   // Fetch options for the active scenario
-  const activeScenarioId = selectedScenarioId || (scenarios.length > 0 ? scenarios[0].id : null);
+  const activeScenarioId = selectedScenarioId || (scenarios.length > 0 ? scenarios[0]?.id ?? null : null);
 
   useEffect(() => {
     if (!activeScenarioId) return;

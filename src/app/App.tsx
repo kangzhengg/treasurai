@@ -3,7 +3,6 @@ import { DashboardView } from './components/DashboardView';
 import { ROISimulator } from './components/ROISimulator';
 import { ScenarioMode } from './components/ScenarioMode';
 import { NegotiationGenerator } from './components/NegotiationGenerator';
-import { ImpactCalculator } from './components/ImpactCalculator';
 import { DualIntelligence } from './components/DualIntelligence';
 import { FallbackMode } from './components/FallbackMode';
 import { SettingsPage } from './components/SettingsPage';
@@ -28,7 +27,6 @@ export default function App() {
           {activeView === 'intelligence' && <DualIntelligence />}
           {activeView === 'negotiation' && <NegotiationGenerator />}
           {activeView === 'scenario' && <ScenarioMode />}
-          {activeView === 'impact' && <ImpactCalculator />}
           {activeView === 'fallback' && <FallbackMode />}
           {activeView === 'settings' && <SettingsPage />}
         </main>
