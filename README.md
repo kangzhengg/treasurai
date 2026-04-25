@@ -1,3 +1,6 @@
+Presentation video link:
+https://drive.google.com/file/d/1yVXqLbyo12LPbKVU6FntdG8TdZC4SEV-/view?usp=sharing
+
 # TreasurAI
 
 TreasurAI is an intelligent financial decision-support platform that combines advanced data analysis with AI-driven insights to help businesses make smarter financial and operational decisions. It leverages dual intelligence layers — traditional statistical models and generative AI — to deliver real-time analysis of cash flows, ROI projections, scenario planning, and supplier negotiation strategies.
