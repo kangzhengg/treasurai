@@ -10,9 +10,6 @@ from datetime import datetime
 import os
 
 
-from routes import analyze
-
-
 from fastapi_app.api_routes import router as main_router
 
 
@@ -34,9 +31,6 @@ app.add_middleware(
 
 
 app.include_router(main_router)
-
-
-app.include_router(analyze.router)
 
 
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   TrendingUp,
   ArrowRight,
@@ -6,43 +6,27 @@ import {
   Zap,
   X
 } from 'lucide-react';
-import { fetchRecommendations, type RecommendationDto, type ScenarioName } from '../services/api';
+import { type RecommendationDto } from '../services/api';
 
 interface DecisionFeedProps {
-  scenario: ScenarioName;
+  decisions: RecommendationDto[];
+  isFallback?: boolean;
+  loading?: boolean;
+  onShowChanges: (id: number) => void;
+  selectedDecisionId: number | null;
 }
 
-export function DecisionFeed({ scenario }: DecisionFeedProps) {
-  const [selectedDecision, setSelectedDecision] = useState<number | null>(null);
-  const [decisions, setDecisions] = useState<RecommendationDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isFallback, setIsFallback] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    const run = async () => {
-      setLoading(true);
-      try {
-        const data = await fetchRecommendations(scenario);
-        if (!mounted) return;
-        setDecisions(data.recommendations);
-        setIsFallback(data.fallback);
-      } catch {
-        if (!mounted) return;
-        setDecisions([]);
-        setIsFallback(true);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    void run();
-    return () => {
-      mounted = false;
-    };
-  }, [scenario]);
+export function DecisionFeed({ 
+  decisions, 
+  isFallback, 
+  loading, 
+  onShowChanges,
+  selectedDecisionId 
+}: DecisionFeedProps) {
+  const [expandedDecisionId, setExpandedDecisionId] = useState<number | null>(null);
 
   const totalImpact = useMemo(
-    () => decisions.reduce((sum, decision) => sum + decision.impact_amount, 0),
+    () => decisions.reduce((sum, decision) => sum + decision.estimated_savings, 0),
     [decisions]
   );
 
@@ -65,12 +49,22 @@ export function DecisionFeed({ scenario }: DecisionFeedProps) {
           FALLBACK MODE: Using 90-day historical averages.
         </div>
       )}
+      
       <div className="space-y-3">
         {loading && <div className="text-sm text-slate-400">Generating recommendations...</div>}
+        {!loading && decisions.length === 0 && (
+          <div className="text-sm text-slate-500 italic py-8 text-center bg-slate-900/30 rounded-xl border border-dashed border-slate-800">
+            No recommendations for this scenario yet.
+          </div>
+        )}
         {decisions.map((decision) => (
           <div key={decision.id}>
             <div
-              className="bg-slate-900/50 backdrop-blur-sm border border-slate-700/80 rounded-xl p-5 hover:border-slate-600 transition-all group"
+              className={`bg-slate-900/50 backdrop-blur-sm border rounded-xl p-5 transition-all group ${
+                selectedDecisionId === decision.id 
+                  ? 'border-cyan-500/50 ring-1 ring-cyan-500/20' 
+                  : 'border-slate-700/80 hover:border-slate-600'
+              }`}
             >
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
@@ -82,9 +76,9 @@ export function DecisionFeed({ scenario }: DecisionFeedProps) {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-medium">{decision.title}</h3>
-                        {decision.priority === 'high' && (
+                        {(decision.priority === 'high' || decision.priority === 'critical') && (
                           <span className="px-2 py-0.5 text-xs font-medium bg-red-500/10 text-red-400 rounded border border-red-500/20">
-                            HIGH
+                            {decision.priority.toUpperCase()}
                           </span>
                         )}
                       </div>
@@ -95,7 +89,7 @@ export function DecisionFeed({ scenario }: DecisionFeedProps) {
 
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
                       <span className="text-lg font-semibold text-emerald-400">
-                        Save RM {decision.impact_amount.toLocaleString()}
+                        Save RM {decision.estimated_savings.toLocaleString()}
                       </span>
                       <span className="text-xs text-slate-500">
                         AI confidence: {decision.confidence}
@@ -105,21 +99,22 @@ export function DecisionFeed({ scenario }: DecisionFeedProps) {
 
                   <div className="flex items-center gap-3 mt-4">
                     <button
-                      onClick={() => setSelectedDecision(selectedDecision === decision.id ? null : decision.id)}
+                      onClick={() => setExpandedDecisionId(expandedDecisionId === decision.id ? null : decision.id)}
                       className="px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                     >
                       <Brain className="w-4 h-4" />
-                      {selectedDecision === decision.id ? 'Hide reasoning' : 'Why this decision?'}
+                      {expandedDecisionId === decision.id ? 'Hide reasoning' : 'Why this decision?'}
                     </button>
                     <button
-                      onClick={() => {
-                        const chartElement = document.getElementById('cash-flow-chart');
-                        chartElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }}
-                      className="px-4 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                      onClick={() => onShowChanges(decision.id)}
+                      className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                        selectedDecisionId === decision.id
+                          ? 'bg-cyan-500 text-white border-cyan-500'
+                          : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
+                      }`}
                     >
                       <TrendingUp className="w-4 h-4" />
-                      Show Changes
+                      {selectedDecisionId === decision.id ? 'Showing Changes' : 'Show Changes'}
                     </button>
                     <button className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
                       {decision.action}
@@ -133,7 +128,7 @@ export function DecisionFeed({ scenario }: DecisionFeedProps) {
               </div>
             </div>
 
-            {selectedDecision === decision.id && (
+            {expandedDecisionId === decision.id && (
               <div className="mt-3 bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-xl p-5">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-2">
@@ -146,7 +141,7 @@ export function DecisionFeed({ scenario }: DecisionFeedProps) {
                     </div>
                   </div>
                   <button
-                    onClick={() => setSelectedDecision(null)}
+                    onClick={() => setExpandedDecisionId(null)}
                     className="p-1 hover:bg-purple-500/10 rounded transition-colors"
                   >
                     <X className="w-4 h-4 text-purple-400" />
@@ -155,7 +150,7 @@ export function DecisionFeed({ scenario }: DecisionFeedProps) {
 
                 <div className="bg-slate-900/50 rounded-lg p-4 mb-4">
                   <p className="text-sm text-slate-300 leading-relaxed">
-                    <span className="text-cyan-300 font-medium">News signal:</span> {decision.news_signal}
+                    <span className="text-cyan-300 font-medium">Reasoning:</span> {decision.news_signal}
                   </p>
                 </div>
 

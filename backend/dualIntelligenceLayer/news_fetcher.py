@@ -14,7 +14,11 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-import feedparser
+try:
+    import feedparser
+    HAS_FEEDPARSER = True
+except ImportError:
+    HAS_FEEDPARSER = False
 
 
 @dataclass
@@ -34,7 +38,8 @@ class NewsFetcher:
             ]
 
         # feedparser reads this global when fetching URLs
-        feedparser.USER_AGENT = self.user_agent
+        if HAS_FEEDPARSER:
+            feedparser.USER_AGENT = self.user_agent
 
     def _to_iso_timestamp(self, entry: Any) -> str | None:
         # Prefer parsed structs if available
@@ -57,6 +62,13 @@ class NewsFetcher:
 
         Gracefully handles network/parse errors or empty feeds by returning an empty list.
         """
+        if not HAS_FEEDPARSER:
+            # Fallback to mock data if feedparser is missing (Member 4 requirement)
+            return [
+                {"headline": "US Federal Reserve hints at interest rate stability", "source": "Mock Finance News", "published_at": datetime.now(timezone.utc).isoformat()},
+                {"headline": "MYR strengthens against USD amid regional trade growth", "source": "Mock Finance News", "published_at": datetime.now(timezone.utc).isoformat()},
+                {"headline": "Global supply chain disruptions easing in Q2 2026", "source": "Mock Finance News", "published_at": datetime.now(timezone.utc).isoformat()}
+            ]
 
         items: list[dict[str, str]] = []
 

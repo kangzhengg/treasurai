@@ -32,20 +32,21 @@ def load_erp_json(path: Path) -> dict[str, Any]:
 
 
 def build_glm_ready_payload(*, erp_data: dict[str, Any], news_items: list[dict[str, Any]]) -> dict[str, Any]:
+    """Merge structured ERP data and unstructured news into the unified GLM format."""
     return {
-        "internal_financial_status": {
-            "source": erp_data.get("extract_metadata", {}).get("source_system", "ERP"),
-            "extracted_at_utc": erp_data.get("extract_metadata", {}).get("extracted_at_utc"),
-            "base_currency": erp_data.get("company", {}).get("base_currency", "MYR"),
+        "company_data": {
+            "profile": erp_data.get("company", {}),
             "cash_balances": erp_data.get("cash_balances", {}),
             "payables": erp_data.get("payables", []),
             "receivables": erp_data.get("receivables", []),
-            "supplier_registry": erp_data.get("supplier_registry", []),
+            "suppliers": erp_data.get("supplier_registry", []),
         },
-        "external_market_context": {
+        "news_data": news_items,
+        "market_context": {
             "fetched_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "items": news_items,
-        },
+            "base_currency": erp_data.get("company", {}).get("base_currency", "MYR"),
+            "source": "Unified Ingestion Engine (Member 3)"
+        }
     }
 
 
