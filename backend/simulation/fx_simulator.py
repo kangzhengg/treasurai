@@ -64,11 +64,13 @@ class FXSimulator:
             'fx_fee': round(fx_fee, 2),
             'net_cost': round(amount_in_rm + fx_fee, 2),
             'savings': 0,  # No savings on day 0
+            'savings_percent': '0.00%',
             'risk_level': 'LOW',
             'confidence': 0.92,
             'best_case': round(best_case_value, 2),
             'worst_case': round(worst_case_value, 2),
-            'reasoning': f'Convert {amount} {currency} immediately at {current_rate:.4f} MYR/{currency}. Locks in rate but incurs {fx_fee:.0f} RM fee.',
+            'roi': '0.00%',
+            'reasoning': f'Convert {amount:,} {currency} immediately at {current_rate:.4f} MYR/{currency}. Locks in rate but incurs {fx_fee:,.0f} RM fee. Best for certainty.',
             'timeline': 'Immediate (1-2 business days)',
         }
 
@@ -105,11 +107,13 @@ class FXSimulator:
             'cost_if_convert_today': round(cost_if_convert_today, 0),
             'projected_cost': round(cost_if_wait, 0),
             'expected_savings': round(max(0, savings), 0),
+            'savings_percent': f'{(max(0, savings) / cost_if_convert_today * 100):.2f}%',
             'down_risk_loss': round(max(0, down_risk_loss), 0),
             'risk_level': 'MEDIUM' if trend < 0 else 'HIGH',
             'confidence': 0.65,
             'success_probability': 0.68 if trend < 0 else 0.42,
-            'reasoning': f'Wait {days_horizon} days for rate improvement. Projected savings: {max(0, savings):.0f} RM if {currency + " weakens" if trend < 0 else "rate improves"}. Risk: Rate could worsen by {max(0, down_risk_loss):.0f} RM.',
+            'roi': f'{(max(0, savings) / (cost_if_convert_today * 0.0015) * 100):.1f}%' if savings > 0 else '0%',
+            'reasoning': f'Wait {days_horizon} days for rate improvement. Projected savings: {max(0, savings):,.0f} RM if {currency} weakens. Risk: Rate could worsen by {max(0, down_risk_loss):,.0f} RM.',
             'timeline': f'{days_horizon} days',
         }
 

@@ -1,6 +1,6 @@
 """
-TreasurAI Backend - Unified Entry Point
-5-Member Architecture Integrated System
+TreasurAI Backend - Member 5 Simulation & ROI Engine
+Standalone entry point for the simulation system.
 """
 
 from fastapi import FastAPI
@@ -9,16 +9,13 @@ from fastapi.responses import JSONResponse
 from datetime import datetime
 import os
 
-
 from fastapi_app.api_routes import router as main_router
 
-
 app = FastAPI(
-    title="TreasurAI Unified Backend",
-    description="AI-powered treasury decision system",
+    title="TreasurAI Simulation Backend",
+    description="Member 5 Standalone Simulation & ROI Engine",
     version="2.1.0",
 )
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,40 +25,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-
 app.include_router(main_router)
-
-
-
 
 @app.get("/")
 def home():
     return {
-        "message": "TreasurAI Unified Backend Running 🔥",
+        "message": "TreasurAI Member 5: Simulation & ROI Engine Running 🔥",
         "timestamp": datetime.now().isoformat(),
-        "system": "5-Member Architecture Integrated",
+        "system": "Simulation & ROI Standalone System",
         "endpoints": {
             "health": "/api/health",
-            "analyze": "/api/analyze",
-            "simulate": "/api/simulate",
-            "dashboard": "/api/dashboard"
+            "fx_strategies": "/api/fx/strategies",
+            "supplier_negotiate": "/api/supplier/negotiate",
+            "roi_scenarios": "/api/roi/scenarios",
+            "scenario_compare": "/api/scenarios/compare"
         }
     }
-
-
-
 
 @app.get("/api/health")
 def health():
     return {
         "status": "ok",
-        "system": "TreasurAI Backend",
+        "system": "TreasurAI Simulation Backend",
         "time": datetime.now().isoformat()
     }
-
-
-
 
 @app.exception_handler(404)
 async def not_found(request, exc):
@@ -70,7 +57,6 @@ async def not_found(request, exc):
         content={"error": "Not found", "path": request.url.path},
     )
 
-
 @app.exception_handler(500)
 async def server_error(request, exc):
     return JSONResponse(
@@ -78,11 +64,8 @@ async def server_error(request, exc):
         content={"error": "Internal server error"},
     )
 
-
-
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
